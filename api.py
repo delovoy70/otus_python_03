@@ -8,7 +8,8 @@ import logging
 import hashlib
 import uuid
 from optparse import OptionParser
-from BaseHTTPServer import HTTPServer, BaseHTTPRequestHandler
+from http.server import HTTPServer, BaseHTTPRequestHandler
+from scoring import get_score, get_interests
 
 SALT = "Otus"
 ADMIN_LOGIN = "admin"
@@ -35,37 +36,59 @@ GENDERS = {
     FEMALE: "female",
 }
 
+class DataField():
+    def __init__(self, required, nullable):
+        self.required = required
+        self.nullable = nullable
 
-class CharField(object):
-    pass
+    def __set__(self, instance, value):
+        self.data = value
+
+    def __get__(self, instance, owner):
+        return self.data
+
+    def correct(self):
+        return True
 
 
-class ArgumentsField(object):
-    pass
+class CharField(DataField):
+    def correct(self):
+        return True
+
+
+class ArgumentsField(DataField):
+    def correct(self):
+        return True
 
 
 class EmailField(CharField):
-    pass
+    def correct(self):
+        return True
 
 
-class PhoneField(object):
-    pass
+class PhoneField(DataField):
+    def correct(self):
+        return True
 
 
-class DateField(object):
-    pass
+class DateField(DataField):
+    def correct(self):
+        return True
 
 
-class BirthDayField(object):
-    pass
+class BirthDayField(DataField):
+    def correct(self):
+        return True
 
 
-class GenderField(object):
-    pass
+class GenderField(DataField):
+    def correct(self):
+        return True
 
 
 class ClientIDsField(object):
-    pass
+    def __init__(self, required):
+        self.required = required
 
 
 class ClientsInterestsRequest(object):
@@ -131,10 +154,10 @@ class MainHTTPHandler(BaseHTTPRequestHandler):
         if request:
             path = self.path.strip("/")
             logging.info("%s: %s %s" % (self.path, data_string, context["request_id"]))
-            if path in self.router:
+            if path in self.router: # TODO
                 try:
                     response, code = self.router[path]({"body": request, "headers": self.headers}, context, self.store)
-                except Exception, e:
+                except Exception as e:
                     logging.exception("Unexpected error: %s" % e)
                     code = INTERNAL_ERROR
             else:
@@ -149,7 +172,7 @@ class MainHTTPHandler(BaseHTTPRequestHandler):
             r = {"error": response or ERRORS.get(code, "Unknown Error"), "code": code}
         context.update(r)
         logging.info(context)
-        self.wfile.write(json.dumps(r))
+        self.wfile.write(json.dumps(r).encode('gbk'))
         return
 
 
