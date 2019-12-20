@@ -112,13 +112,13 @@ class MethodRequest(object):
     arguments = ArgumentsField(required=True, nullable=True)
     method = CharField(required=True, nullable=False)
 
-    @property
-    def is_admin(self):
-        return self.login == ADMIN_LOGIN
+    # @property
+    # def is_admin(self):
+    #     return self.login == ADMIN_LOGIN
 
 
 def check_auth(request):
-    if request.is_admin:
+    if request.get('login') == ADMIN_LOGIN:
         digest = hashlib.sha512(datetime.datetime.now().strftime("%Y%m%d%H") + ADMIN_SALT).hexdigest()
     else:
         digest = hashlib.sha512(request.account + request.login + SALT).hexdigest()
@@ -127,14 +127,33 @@ def check_auth(request):
     return False
 
 
-def method_handler(request, ctx, store):
-    response, code = None, None
+def online_score_method_handler(request, ctx, store):
+    if not check_auth(request):
+        return "Forbidden", FORBIDDEN
+    if request.login == ADMIN_LOGIN:
+        response, code = 42, OK
+    else:
+        response, code = None, None
     return response, code
+
+
+def method_handler(request, ctx, store):
+    if request['method'] == "online_score":
+        if not check_auth(request):
+            return "Forbidden", FORBIDDEN
+        if request.login == ADMIN_LOGIN:
+            response, code = 42, OK
+        else:
+            response, code = None, None
+        return response, code
+    else:
+        response, code = None, None
+        return response, code
 
 
 class MainHTTPHandler(BaseHTTPRequestHandler):
     router = {
-        "method": method_handler
+        "method": method_handler,
     }
     store = None
 
